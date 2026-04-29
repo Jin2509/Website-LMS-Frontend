@@ -1,0 +1,1 @@
+export { mockExam } from './mockExamData';
