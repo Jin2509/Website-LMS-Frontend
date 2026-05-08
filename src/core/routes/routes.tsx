@@ -232,11 +232,11 @@ export const router = createBrowserRouter(
           element: <AssignmentSubmissions />,
           loader: authLoader('teacher'),
         },
-        {
-          path: 'history',
-          element: <TeacherHistory />,
-          loader: authLoader('teacher'),
-        },
+        // {
+        //   path: 'history',
+        //   element: <TeacherHistory />,
+        //   loader: authLoader('teacher'),
+        // },
         {
           path: 'settings',
           element: <TeacherSettings />,

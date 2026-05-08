@@ -81,7 +81,7 @@ export function Layout({ children }: LayoutProps) {
         { icon: Users, label: 'Học sinh', path: `${baseRoute}/students` },
         { icon: FileText, label: 'Bài tập', path: `${baseRoute}/assignments` },
         { icon: MessageSquare, label: 'Thảo luận', path: `${baseRoute}/discussions` },
-        { icon: History, label: 'Lịch sử giảng dạy', path: `${baseRoute}/history` },
+        // { icon: History, label: 'Lịch sử giảng dạy', path: `${baseRoute}/history` },
         { icon: Settings, label: 'Cài đặt', path: `${baseRoute}/settings` },
       ];
 

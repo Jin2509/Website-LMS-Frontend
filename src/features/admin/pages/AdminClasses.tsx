@@ -26,7 +26,6 @@ import { Link } from 'react-router';
 import { classes, students, classStudents } from '@/shared/data';
 import { toast } from 'sonner';
 
-// Mock data for teachers
 const teachers = [
   { id: '1', name: 'TS. Nguyễn Văn A', email: 'nguyen.a@example.com', department: 'Computer Science' },
   { id: '2', name: 'ThS. Trần Thị B', email: 'tran.b@example.com', department: 'Computer Science' },
