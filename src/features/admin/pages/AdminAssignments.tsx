@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Layout } from '@/shared/components/layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { Button } from '@/shared/components/ui/button';
@@ -18,153 +18,113 @@ import {
   Users,
   BookOpen,
   Eye,
-  Download
+  Download,
+  Loader2
 } from 'lucide-react';
 import { PageHeader } from '@/shared/components/common';
 import { toast } from 'sonner';
 import { exportToExcel } from '@/lib/excelUtils';
-
-interface Assignment {
-  id: string;
-  title: string;
-  course: string;
-  courseId: string;
-  dueDate: string;
-  status: 'active' | 'closed';
-  totalSubmissions: number;
-  totalStudents: number;
-  description: string;
-  createdDate: string;
-}
-
-const mockAssignments: Assignment[] = [
-  {
-    id: '1',
-    title: 'Bài tập cuối kỳ: Xây dựng ứng dụng Web',
-    course: 'Lập trình Web cơ bản',
-    courseId: '3',
-    dueDate: '2026-03-28',
-    status: 'active',
-    totalSubmissions: 28,
-    totalStudents: 45,
-    description: 'Xây dựng một ứng dụng web hoàn chỉnh sử dụng React và Node.js',
-    createdDate: '2026-03-01',
-  },
-  {
-    id: '2',
-    title: 'Thuật toán sắp xếp và tìm kiếm',
-    course: 'Cấu trúc dữ liệu và Giải thuật',
-    courseId: '4',
-    dueDate: '2026-03-25',
-    status: 'active',
-    totalSubmissions: 35,
-    totalStudents: 40,
-    description: 'Cài đặt và phân tích các thuật toán sắp xếp: Quick Sort, Merge Sort, Heap Sort',
-    createdDate: '2026-03-05',
-  },
-  {
-    id: '3',
-    title: 'Bài tập tích phân và đạo hàm',
-    course: 'Toán cao cấp',
-    courseId: '2',
-    dueDate: '2026-03-20',
-    status: 'closed',
-    totalSubmissions: 50,
-    totalStudents: 50,
-    description: 'Giải các bài toán về tích phân và đạo hàm',
-    createdDate: '2026-02-28',
-  },
-  {
-    id: '4',
-    title: 'Lập trình hướng đối tượng',
-    course: 'Nhập môn khoa học máy tính',
-    courseId: '1',
-    dueDate: '2026-04-05',
-    status: 'active',
-    totalSubmissions: 18,
-    totalStudents: 52,
-    description: 'Thiết kế và triển khai hệ thống quản lý thư viện sử dụng OOP',
-    createdDate: '2026-03-10',
-  },
-  {
-    id: '5',
-    title: 'HTML/CSS Layout Design',
-    course: 'Lập trình Web cơ bản',
-    courseId: '3',
-    dueDate: '2026-03-15',
-    status: 'closed',
-    totalSubmissions: 45,
-    totalStudents: 45,
-    description: 'Thiết kế giao diện responsive cho website bán hàng',
-    createdDate: '2026-02-20',
-  },
-];
+import { assignmentService, type Assignment } from '@/core/service/assignment.service';
+import { courseService, type Course } from '@/core/service/course.service';
 
 export default function AdminAssignments() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'closed'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'ACTIVE' | 'CLOSED'>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [assignments, setAssignments] = useState(mockAssignments);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
   const [formData, setFormData] = useState({
     title: '',
-    course: '',
     courseId: '',
     dueDate: '',
     description: '',
+    maxScore: 100,
   });
 
-  // Filter assignments
-  const filteredAssignments = assignments.filter(assignment => {
-    const matchesSearch = assignment.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          assignment.course.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || assignment.status === filterStatus;
-    return matchesSearch && matchesStatus;
-  });
+  // Fetch initial data
+  useEffect(() => {
+    fetchData();
+  }, []);
 
-  // Statistics
-  const stats = {
-    total: assignments.length,
-    active: assignments.filter(a => a.status === 'active').length,
-    closed: assignments.filter(a => a.status === 'closed').length,
-    totalSubmissions: assignments.reduce((sum, a) => sum + a.totalSubmissions, 0),
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const [assignmentsData, coursesData] = await Promise.all([
+        assignmentService.getAllAssignments(),
+        courseService.getAllCourses()
+      ]);
+      setAssignments(assignmentsData || []);
+      setCourses(coursesData || []);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      toast.error('Không thể tải dữ liệu. Vui lòng thử lại sau.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleCreateAssignment = () => {
-    if (!formData.title || !formData.course || !formData.dueDate) {
+  // Filter assignments
+  const filteredAssignments = useMemo(() => {
+    return assignments.filter(assignment => {
+      const matchesSearch = assignment.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (assignment.courseName && assignment.courseName.toLowerCase().includes(searchTerm.toLowerCase()));
+      const matchesStatus = filterStatus === 'all' || assignment.status === filterStatus;
+      return matchesSearch && matchesStatus;
+    });
+  }, [assignments, searchTerm, filterStatus]);
+
+  // Statistics
+  const stats = useMemo(() => ({
+    total: assignments.length,
+    active: assignments.filter(a => a.status === 'ACTIVE').length,
+    closed: assignments.filter(a => a.status === 'CLOSED').length,
+    // Note: totalSubmissions and totalStudents might need to be fetched separately if not in Assignment object
+    totalSubmissions: 0, 
+  }), [assignments]);
+
+  const handleCreateAssignment = async () => {
+    if (!formData.title || !formData.courseId || !formData.dueDate) {
       toast.error('Vui lòng điền đầy đủ thông tin bắt buộc');
       return;
     }
 
-    const newAssignment: Assignment = {
-      id: (assignments.length + 1).toString(),
-      title: formData.title,
-      course: formData.course,
-      courseId: formData.courseId || '1',
-      dueDate: formData.dueDate,
-      status: 'active',
-      totalSubmissions: 0,
-      totalStudents: 0,
-      description: formData.description,
-      createdDate: new Date().toISOString().split('T')[0],
-    };
+    try {
+      const newAssignment = await assignmentService.createAssignment({
+        title: formData.title,
+        description: formData.description,
+        courseId: parseInt(formData.courseId),
+        dueDate: formData.dueDate,
+        maxScore: formData.maxScore,
+      });
 
-    setAssignments([...assignments, newAssignment]);
-    toast.success('Tạo bài tập thành công!');
-    setShowCreateModal(false);
-    setFormData({
-      title: '',
-      course: '',
-      courseId: '',
-      dueDate: '',
-      description: '',
-    });
+      setAssignments([newAssignment, ...assignments]);
+      toast.success('Tạo bài tập thành công!');
+      setShowCreateModal(false);
+      setFormData({
+        title: '',
+        courseId: '',
+        dueDate: '',
+        description: '',
+        maxScore: 100,
+      });
+    } catch (error) {
+      console.error('Error creating assignment:', error);
+      toast.error('Có lỗi xảy ra khi tạo bài tập');
+    }
   };
 
-  const handleDeleteAssignment = (id: string) => {
+  const handleDeleteAssignment = async (id: number) => {
     if (confirm('Bạn có chắc chắn muốn xóa bài tập này?')) {
-      setAssignments(assignments.filter(a => a.id !== id));
-      toast.success('Đã xóa bài tập');
+      try {
+        await assignmentService.deleteAssignment(id);
+        setAssignments(assignments.filter(a => a.id !== id));
+        toast.success('Đã xóa bài tập');
+      } catch (error) {
+        console.error('Error deleting assignment:', error);
+        toast.error('Không thể xóa bài tập. Vui lòng thử lại.');
+      }
     }
   };
 
@@ -173,15 +133,11 @@ export default function AdminAssignments() {
       const data = filteredAssignments.map((assignment, index) => ({
         'STT': index + 1,
         'Tiêu đề': assignment.title,
-        'Khóa học': assignment.course,
+        'Khóa học': assignment.courseName || 'N/A',
         'Hạn nộp': assignment.dueDate,
-        'Trạng thái': assignment.status === 'active' ? 'Đang mở' : 'Đã đóng',
-        'Đã nộp': assignment.totalSubmissions,
-        'Tổng sinh viên': assignment.totalStudents,
-        'Tỷ lệ nộp': assignment.totalStudents > 0 
-          ? `${Math.round((assignment.totalSubmissions / assignment.totalStudents) * 100)}%`
-          : '0%',
-        'Ngày tạo': assignment.createdDate,
+        'Trạng thái': assignment.status === 'ACTIVE' ? 'Đang mở' : 'Đã đóng',
+        'Điểm tối đa': assignment.maxScore,
+        'Ngày tạo': assignment.createdAt ? new Date(assignment.createdAt).toLocaleDateString('vi-VN') : 'N/A',
       }));
 
       exportToExcel(data, `Danh_sach_bai_tap_${new Date().toISOString().split('T')[0]}.xlsx`);
@@ -190,11 +146,6 @@ export default function AdminAssignments() {
       console.error('Error exporting Excel:', error);
       toast.error('Có lỗi xảy ra khi xuất file Excel');
     }
-  };
-
-  const getSubmissionRate = (submitted: number, total: number) => {
-    if (total === 0) return 0;
-    return Math.round((submitted / total) * 100);
   };
 
   const getDaysUntilDue = (dueDate: string) => {
@@ -296,15 +247,15 @@ export default function AdminAssignments() {
                     Tất cả
                   </Button>
                   <Button
-                    variant={filterStatus === 'active' ? 'default' : 'outline'}
-                    onClick={() => setFilterStatus('active')}
+                    variant={filterStatus === 'ACTIVE' ? 'default' : 'outline'}
+                    onClick={() => setFilterStatus('ACTIVE')}
                     size="sm"
                   >
                     Đang mở
                   </Button>
                   <Button
-                    variant={filterStatus === 'closed' ? 'default' : 'outline'}
-                    onClick={() => setFilterStatus('closed')}
+                    variant={filterStatus === 'CLOSED' ? 'default' : 'outline'}
+                    onClick={() => setFilterStatus('CLOSED')}
                     size="sm"
                   >
                     Đã đóng
@@ -334,7 +285,14 @@ export default function AdminAssignments() {
 
         {/* Assignments List */}
         <div className="space-y-4">
-          {filteredAssignments.length === 0 ? (
+          {isLoading ? (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mx-auto mb-4" />
+                <p className="text-gray-500">Đang tải danh sách bài tập...</p>
+              </CardContent>
+            </Card>
+          ) : filteredAssignments.length === 0 ? (
             <Card>
               <CardContent className="p-12 text-center">
                 <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -344,7 +302,6 @@ export default function AdminAssignments() {
           ) : (
             filteredAssignments.map((assignment) => {
               const daysLeft = getDaysUntilDue(assignment.dueDate);
-              const submissionRate = getSubmissionRate(assignment.totalSubmissions, assignment.totalStudents);
               
               return (
                 <Card key={assignment.id} className="hover:shadow-md transition-shadow">
@@ -353,10 +310,10 @@ export default function AdminAssignments() {
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           <h3 className="text-xl font-semibold text-gray-900">{assignment.title}</h3>
-                          <Badge variant={assignment.status === 'active' ? 'default' : 'secondary'}>
-                            {assignment.status === 'active' ? 'Đang mở' : 'Đã đóng'}
+                          <Badge variant={assignment.status === 'ACTIVE' ? 'default' : 'secondary'}>
+                            {assignment.status === 'ACTIVE' ? 'Đang mở' : 'Đã đóng'}
                           </Badge>
-                          {assignment.status === 'active' && daysLeft <= 3 && daysLeft >= 0 && (
+                          {assignment.status === 'ACTIVE' && daysLeft <= 3 && daysLeft >= 0 && (
                             <Badge variant="destructive">
                               Sắp hết hạn
                             </Badge>
@@ -365,13 +322,13 @@ export default function AdminAssignments() {
                         <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
                           <div className="flex items-center gap-1">
                             <BookOpen className="w-4 h-4" />
-                            {assignment.course}
+                            {assignment.courseName || `Course ID: ${assignment.courseId}`}
                           </div>
                           <div className="flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
                             Hạn: {new Date(assignment.dueDate).toLocaleDateString('vi-VN')}
                           </div>
-                          {assignment.status === 'active' && (
+                          {assignment.status === 'ACTIVE' && (
                             <div className="flex items-center gap-1">
                               <Clock className="w-4 h-4" />
                               {daysLeft > 0 ? `Còn ${daysLeft} ngày` : 'Đã quá hạn'}
@@ -380,24 +337,10 @@ export default function AdminAssignments() {
                         </div>
                         <p className="text-gray-600 mb-4">{assignment.description}</p>
                         
-                        {/* Progress Bar */}
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-600">
-                              Đã nộp: {assignment.totalSubmissions}/{assignment.totalStudents} sinh viên
-                            </span>
-                            <span className="font-semibold text-gray-900">{submissionRate}%</span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div
-                              className={`h-2 rounded-full transition-all ${
-                                submissionRate >= 80 ? 'bg-green-600' :
-                                submissionRate >= 50 ? 'bg-blue-600' :
-                                'bg-orange-600'
-                              }`}
-                              style={{ width: `${submissionRate}%` }}
-                            />
-                          </div>
+                        <div className="flex items-center gap-4 text-sm">
+                          <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">
+                            Điểm tối đa: {assignment.maxScore}
+                          </Badge>
                         </div>
                       </div>
                       
@@ -458,27 +401,45 @@ export default function AdminAssignments() {
                 </div>
 
                 <div>
-                  <Label htmlFor="course">
+                  <Label htmlFor="courseId">
                     Khóa học <span className="text-red-500">*</span>
                   </Label>
-                  <Input
-                    id="course"
-                    placeholder="Nhập tên khóa học"
-                    value={formData.course}
-                    onChange={(e) => setFormData({ ...formData, course: e.target.value })}
-                  />
+                  <select
+                    id="courseId"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={formData.courseId}
+                    onChange={(e) => setFormData({ ...formData, courseId: e.target.value })}
+                  >
+                    <option value="">Chọn khóa học</option>
+                    {courses.map(course => (
+                      <option key={course.id} value={course.id}>
+                        {course.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
-                <div>
-                  <Label htmlFor="dueDate">
-                    Hạn nộp <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="dueDate"
-                    type="date"
-                    value={formData.dueDate}
-                    onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="dueDate">
+                      Hạn nộp <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="dueDate"
+                      type="date"
+                      value={formData.dueDate}
+                      onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="maxScore">Điểm tối đa</Label>
+                    <Input
+                      id="maxScore"
+                      type="number"
+                      value={formData.maxScore}
+                      onChange={(e) => setFormData({ ...formData, maxScore: parseInt(e.target.value) })}
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -495,22 +456,24 @@ export default function AdminAssignments() {
                 <div className="flex gap-3 pt-4">
                   <Button
                     variant="outline"
+                    className="flex-1"
                     onClick={() => {
                       setShowCreateModal(false);
                       setFormData({
                         title: '',
-                        course: '',
                         courseId: '',
                         dueDate: '',
                         description: '',
+                        maxScore: 100,
                       });
                     }}
-                    className="flex-1"
                   >
                     Hủy
                   </Button>
-                  <Button onClick={handleCreateAssignment} className="flex-1 gap-2">
-                    <Plus className="w-4 h-4" />
+                  <Button
+                    className="flex-1"
+                    onClick={handleCreateAssignment}
+                  >
                     Tạo bài tập
                   </Button>
                 </div>
