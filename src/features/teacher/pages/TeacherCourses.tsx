@@ -16,20 +16,51 @@ import {
   DropdownMenuTrigger,
 } from '@/shared/components/ui/dropdown-menu';
 import { courses } from '@/shared/data';
-import { Plus, Search, Users, BookOpen, Edit, Trash2, MoreVertical } from 'lucide-react';
+import { Plus, Search, Users, BookOpen, Edit, Trash2, MoreVertical, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { courseService, type Course, type CreateCourseRequest } from '@/core/service/course.service';
+import { useEffect, useMemo } from 'react';
 
 export default function TeacherCourses() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [myCourses, setMyCourses] = useState<Course[]>([]);
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+
   const [newCourse, setNewCourse] = useState({
     title: '',
     description: '',
     category: '',
   });
 
-  const myCourses = courses.filter(c => c.instructor === 'Dr. Sarah Smith');
+  const [editCourse, setEditCourse] = useState<CreateCourseRequest>({
+    name: '',
+    description: '',
+    category: '',
+    level: 'Beginner',
+    price: 0,
+  });
+
+  useEffect(() => {
+    fetchMyCourses();
+  }, []);
+
+  const fetchMyCourses = async () => {
+    setIsLoading(true);
+    try {
+      const data = await courseService.getMyCourses();
+      setMyCourses(data || []);
+    } catch (error) {
+      console.error('Error fetching courses:', error);
+      toast.error('Không thể tải danh sách khóa học');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleCreateCourse = () => {
     if (!newCourse.title || !newCourse.description || !newCourse.category) {
@@ -41,30 +72,69 @@ export default function TeacherCourses() {
     navigate('/teacher/courses/create', { state: newCourse });
   };
 
-  const handleEditCourse = (courseId: string) => {
-    navigate(`/teacher/courses/edit/${courseId}`);
-  };
+  const openEditDialog = (course: Course) => {
+     setEditingCourse(course);
+     setEditCourse({
+       name: course.name,
+       description: course.description,
+       category: course.category,
+       level: (course as any).level || 'Beginner',
+       price: (course as any).price || 0,
+     });
+     setIsEditDialogOpen(true);
+   };
 
-  const handleDeleteCourse = (courseId: string, courseTitle: string) => {
-    if (confirm(`Bạn có chắc chắn muốn xóa khóa học "${courseTitle}"?`)) {
-      toast.success('Đã xóa khóa học thành công!');
-      // Handle delete logic here
-    }
-  };
+   const handleUpdateCourse = async () => {
+     if (!editingCourse || !editCourse.name || !editCourse.category) {
+       toast.error('Vui lòng điền đầy đủ thông tin');
+       return;
+     }
 
-  const filterCourses = (courseList: typeof courses) => {
-    return courseList.filter(course =>
-      course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      course.category.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  };
+     setIsSubmitting(true);
+     try {
+       await courseService.updateCourse(editingCourse.id, editCourse);
+       toast.success('Cập nhật khóa học thành công!');
+       setIsEditDialogOpen(false);
+       fetchMyCourses();
+     } catch (error) {
+       console.error('Error updating course:', error);
+       toast.error('Có lỗi xảy ra khi cập nhật khóa học');
+     } finally {
+       setIsSubmitting(false);
+     }
+   };
+
+   const handleEditCourse = (courseId: string) => {
+     const course = myCourses.find(c => c.id.toString() === courseId);
+     if (course) openEditDialog(course);
+   };
+
+   const handleDeleteCourse = async (courseId: number, courseTitle: string) => {
+     if (confirm(`Bạn có chắc chắn muốn xóa khóa học "${courseTitle}"?`)) {
+       try {
+         await courseService.deleteCourse(courseId);
+         toast.success('Đã xóa khóa học thành công!');
+         fetchMyCourses();
+       } catch (error) {
+         console.error('Error deleting course:', error);
+         toast.error('Không thể xóa khóa học');
+       }
+     }
+   };
+
+   const filteredCourses = useMemo(() => {
+     return myCourses.filter(course =>
+       course.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+       course.category.toLowerCase().includes(searchQuery.toLowerCase())
+     );
+   }, [myCourses, searchQuery]);
 
   return (
     <Layout>
       <div className="max-w-7xl">
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">My Courses</h1>
+            <h1 className="text-5xl font-bold text-gray-900">My Courses</h1>
             <p className="text-gray-600 mt-1">Manage your courses and content</p>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -114,6 +184,58 @@ export default function TeacherCourses() {
                   </Button>
                   <Button onClick={handleCreateCourse}>
                     Create Course
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Chỉnh sửa khóa học</DialogTitle>
+                <DialogDescription>Cập nhật thông tin cho khóa học của bạn</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-title">Tên khóa học</Label>
+                  <Input
+                    id="edit-title"
+                    placeholder="Nhập tên khóa học..."
+                    value={editCourse.name}
+                    onChange={(e) => setEditCourse({ ...editCourse, name: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-category">Danh mục</Label>
+                  <Input
+                    id="edit-category"
+                    placeholder="Ví dụ: Khoa học máy tính"
+                    value={editCourse.category}
+                    onChange={(e) => setEditCourse({ ...editCourse, category: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-description">Mô tả</Label>
+                  <Textarea
+                    id="edit-description"
+                    placeholder="Mô tả nội dung khóa học..."
+                    value={editCourse.description}
+                    onChange={(e) => setEditCourse({ ...editCourse, description: e.target.value })}
+                    rows={4}
+                  />
+                </div>
+                <div className="flex gap-3 justify-end pt-4">
+                  <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={isSubmitting}>
+                    Hủy
+                  </Button>
+                  <Button onClick={handleUpdateCourse} disabled={isSubmitting}>
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Đang lưu...
+                      </>
+                    ) : 'Lưu thay đổi'}
                   </Button>
                 </div>
               </div>
@@ -179,17 +301,17 @@ export default function TeacherCourses() {
 
         {/* Courses Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filterCourses(myCourses).map((course) => (
+          {filteredCourses.map((course) => (
             <Card key={course.id} className="overflow-hidden hover:shadow-lg transition-shadow">
               <img
-                src={course.image}
-                alt={course.title}
+                src={(course as any).image || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&q=80'}
+                alt={course.name}
                 className="w-full h-40 object-cover"
               />
               <CardContent className="p-6">
                 <Badge className="mb-3">{course.category}</Badge>
                 <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
-                  {course.title}
+                  {course.name}
                 </h3>
                 <p className="text-sm text-gray-600 mb-4 line-clamp-2">
                   {course.description}
@@ -199,13 +321,13 @@ export default function TeacherCourses() {
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2 text-gray-600">
                       <Users className="w-4 h-4" />
-                      <span>52 students</span>
+                      <span>{course.studentCount || 0} students</span>
                     </div>
-                    <span className="text-gray-600">{course.totalLessons} lessons</span>
+                    <span className="text-gray-600">{(course as any).totalLessons || 0} lessons</span>
                   </div>
                   <div className="flex items-center justify-between text-sm text-gray-600">
                     <span>Avg. Progress</span>
-                    <span className="font-semibold text-indigo-600">{course.progress}%</span>
+                    <span className="font-semibold text-indigo-600">{(course as any).progress || 0}%</span>
                   </div>
                 </div>
 
@@ -223,13 +345,13 @@ export default function TeacherCourses() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleEditCourse(course.id)}>
+                      <DropdownMenuItem onClick={() => handleEditCourse(course.id.toString())}>
                         <Edit className="w-4 h-4 mr-2" />
                         Chỉnh sửa
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem 
-                        onClick={() => handleDeleteCourse(course.id, course.title)}
+                        onClick={() => handleDeleteCourse(course.id, course.name)}
                         className="text-red-600 focus:text-red-600"
                       >
                         <Trash2 className="w-4 h-4 mr-2" />
@@ -243,7 +365,7 @@ export default function TeacherCourses() {
           ))}
         </div>
 
-        {filterCourses(myCourses).length === 0 && (
+        {filteredCourses.length === 0 && (
           <Card>
             <CardContent className="p-12 text-center">
               <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />

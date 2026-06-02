@@ -195,7 +195,7 @@ export default function StudentSchedule() {
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2">
+              <h1 className="text-5xl font-bold bg-clip-text mb-2">
                 Thời khóa biểu
               </h1>
               <p className="text-gray-600 mt-1">Lịch học và hoạt động trong tuần</p>

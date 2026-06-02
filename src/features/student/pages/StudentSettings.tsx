@@ -146,7 +146,7 @@ export default function StudentSettings() {
     <Layout>
       <div className="max-w-5xl">
         <div className="mb-8">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2">
+          <h1 className="text-5xl font-bold bg-clip-text mb-2">
             Cài đặt
           </h1>
           <p className="text-gray-600 mt-1">Quản lý thông tin cá nhân và tùy chỉnh hệ thống</p>
@@ -396,21 +396,7 @@ export default function StudentSettings() {
                     <Lock className="w-4 h-4" />
                     Đổi mật khẩu
                   </Button>
-                </div>
-
-                {/* Two-Factor Authentication */}
-                <div className="pt-6 border-t">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="font-semibold text-gray-900 mb-1">Xác thực hai yếu tố</h3>
-                      <p className="text-sm text-gray-600">Tăng cường bảo mật tài khoản với xác thực 2FA</p>
-                    </div>
-                    <Badge variant="outline" className="text-orange-600 border-orange-300">
-                      Chưa kích hoạt
-                    </Badge>
-                  </div>
-                  <Button variant="outline" className="mt-4">Kích hoạt 2FA</Button>
-                </div>
+                </div>                
               </CardContent>
             </Card>
           </TabsContent>

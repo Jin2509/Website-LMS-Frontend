@@ -12,10 +12,10 @@ export default function StudentClasses() {
     <Layout>
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2">
-            Lớp học của tôi
+          <h1 className="text-5xl font-bold bg-clip-text mb-2">
+            Lớp học
           </h1>
-          <p className="text-gray-600 mt-1">Tất cả các lớp học bạn đã đăng ký</p>
+          <p className="text-gray-600 mt-1">Tất cả các lớp học của bạn</p>
         </div>
 
         {/* Stats */}
@@ -24,7 +24,7 @@ export default function StudentClasses() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Tổng số lớp</p>
+                  <p className="text-sm text-gray-600">Tổng số lớp học</p>
                   <p className="text-3xl font-bold text-gray-900 mt-1">{classes.length}</p>
                 </div>
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">

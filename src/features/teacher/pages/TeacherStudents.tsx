@@ -121,7 +121,7 @@ export default function TeacherStudents() {
     <Layout>
       <div className="max-w-7xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Students</h1>
+          <h1 className="text-5xl font-bold text-gray-900">Students</h1>
           <p className="text-gray-600 mt-1">Monitor and manage student performance</p>
         </div>
 

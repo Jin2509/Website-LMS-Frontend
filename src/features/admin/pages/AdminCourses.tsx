@@ -19,8 +19,18 @@ export default function AdminCourses() {
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
 
   const [formData, setFormData] = useState<CreateCourseRequest>({
+    name: '',
+    description: '',
+    category: '',
+    level: 'Beginner',
+    price: 0,
+  });
+
+  const [editFormData, setEditFormData] = useState<CreateCourseRequest>({
     name: '',
     description: '',
     category: '',
@@ -93,6 +103,38 @@ export default function AdminCourses() {
     }
   };
 
+  const openEditModal = (course: Course) => {
+    setEditingCourse(course);
+    setEditFormData({
+      name: course.name,
+      description: course.description,
+      category: course.category,
+      level: (course.level as any) || 'Beginner',
+      price: course.price,
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdateCourse = async () => {
+    if (!editingCourse || !editFormData.name || !editFormData.category) {
+      toast.error('Vui lòng điền đầy đủ tên và danh mục khóa học');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await courseService.updateCourse(editingCourse.id, editFormData);
+      toast.success('Cập nhật khóa học thành công!');
+      setIsEditModalOpen(false);
+      fetchCourses();
+    } catch (error) {
+      console.error('Error updating course:', error);
+      toast.error('Có lỗi xảy ra khi cập nhật khóa học');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const stats = useMemo(() => ({
     total: courses.length,
     totalStudents: courses.reduce((sum, c) => sum + (c.studentCount || 0), 0),
@@ -103,7 +145,7 @@ export default function AdminCourses() {
 
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <PageHeader
             title="Quản lý khóa học"
@@ -249,7 +291,7 @@ export default function AdminCourses() {
                       variant="outline"
                       size="icon"
                       className="hover:bg-amber-50 hover:text-amber-700 hover:border-amber-200"
-                      onClick={() => navigate(`/admin/courses/${course.id}/edit`)}
+                      onClick={() => openEditModal(course)}
                     >
                       <Edit className="w-4 h-4" />
                     </Button>
@@ -265,6 +307,101 @@ export default function AdminCourses() {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        )}
+
+        {/* Edit Course Modal */}
+        {isEditModalOpen && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+            <Card className="w-full max-w-2xl shadow-2xl border-none">
+              <CardHeader className="bg-gray-50/50 border-b">
+                <CardTitle className="text-2xl">Chỉnh sửa khóa học</CardTitle>
+                <CardDescription>Cập nhật thông tin chi tiết cho khóa học</CardDescription>
+              </CardHeader>
+              <CardContent className="p-6 space-y-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-name" className="text-sm font-semibold">Tên khóa học <span className="text-red-500">*</span></Label>
+                    <Input
+                      id="edit-name"
+                      placeholder="Ví dụ: React Nâng cao cho Mobile"
+                      value={editFormData.name}
+                      onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-category" className="text-sm font-semibold">Danh mục <span className="text-red-500">*</span></Label>
+                    <Input
+                      id="edit-category"
+                      placeholder="Ví dụ: Web Development"
+                      value={editFormData.category}
+                      onChange={(e) => setEditFormData({ ...editFormData, category: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-level" className="text-sm font-semibold">Trình độ</Label>
+                    <select
+                      id="edit-level"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      value={editFormData.level}
+                      onChange={(e) => setEditFormData({ ...editFormData, level: e.target.value as any })}
+                    >
+                      <option value="Beginner">Cơ bản</option>
+                      <option value="Intermediate">Trung cấp</option>
+                      <option value="Advanced">Nâng cao</option>
+                      <option value="All Levels">Mọi cấp độ</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-price" className="text-sm font-semibold">Giá khóa học (VNĐ)</Label>
+                    <Input
+                      id="edit-price"
+                      type="number"
+                      placeholder="0"
+                      value={editFormData.price}
+                      onChange={(e) => setEditFormData({ ...editFormData, price: parseInt(e.target.value) || 0 })}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-description" className="text-sm font-semibold">Mô tả khóa học</Label>
+                  <Textarea
+                    id="edit-description"
+                    placeholder="Mô tả tóm tắt về nội dung và mục tiêu của khóa học..."
+                    rows={4}
+                    value={editFormData.description}
+                    onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-6 border-t mt-6">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setIsEditModalOpen(false)}
+                    disabled={isSubmitting}
+                  >
+                    Hủy bỏ
+                  </Button>
+                  <Button
+                    className="flex-1 bg-blue-600 hover:bg-blue-700"
+                    onClick={handleUpdateCourse}
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Đang lưu...
+                      </>
+                    ) : 'Lưu thay đổi'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
 

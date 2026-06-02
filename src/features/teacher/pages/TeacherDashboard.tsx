@@ -110,8 +110,8 @@ export default function TeacherDashboard() {
       <div className="max-w-7xl">
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2">
-              Bảng điều khiển giáo viên
+            <h1 className="text-5xl font-bold bg-clip-text mb-2">
+              Bảng điều khiển
             </h1>
             <p className="text-gray-600 mt-1">Quản lý khóa học và học sinh của bạn</p>
           </div>

@@ -176,10 +176,10 @@ export default function AdminDiscussions() {
 
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto p-6">
+      <div className="max-w-5xl mx-auto p-6">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
+          <h1 className="text-5xl font-bold bg-clip-text mb-2">
             Quản lý thảo luận
           </h1>
           <p className="text-gray-600 mt-1">Giám sát và kiểm duyệt các thảo luận trên toàn hệ thống</p>

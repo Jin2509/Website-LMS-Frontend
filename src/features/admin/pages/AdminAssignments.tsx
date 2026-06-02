@@ -34,8 +34,18 @@ export default function AdminAssignments() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
   
   const [formData, setFormData] = useState({
+    title: '',
+    courseId: '',
+    dueDate: '',
+    description: '',
+    maxScore: 100,
+  });
+
+  const [editFormData, setEditFormData] = useState({
     title: '',
     courseId: '',
     dueDate: '',
@@ -115,6 +125,42 @@ export default function AdminAssignments() {
     }
   };
 
+  const openEditModal = (assignment: Assignment) => {
+    setEditingAssignment(assignment);
+    setEditFormData({
+      title: assignment.title,
+      courseId: assignment.courseId.toString(),
+      dueDate: assignment.dueDate.split('T')[0], // format for date input
+      description: assignment.description || '',
+      maxScore: assignment.maxScore,
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdateAssignment = async () => {
+    if (!editingAssignment || !editFormData.title || !editFormData.courseId || !editFormData.dueDate) {
+      toast.error('Vui lòng điền đầy đủ thông tin bắt buộc');
+      return;
+    }
+
+    try {
+      await assignmentService.updateAssignment(editingAssignment.id, {
+        title: editFormData.title,
+        description: editFormData.description,
+        courseId: parseInt(editFormData.courseId),
+        dueDate: editFormData.dueDate,
+        maxScore: editFormData.maxScore,
+      });
+
+      toast.success('Cập nhật bài tập thành công!');
+      setIsEditModalOpen(false);
+      fetchData();
+    } catch (error) {
+      console.error('Error updating assignment:', error);
+      toast.error('Có lỗi xảy ra khi cập nhật bài tập');
+    }
+  };
+
   const handleDeleteAssignment = async (id: number) => {
     if (confirm('Bạn có chắc chắn muốn xóa bài tập này?')) {
       try {
@@ -158,11 +204,10 @@ export default function AdminAssignments() {
 
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         <PageHeader
           title="Quản lý bài tập"
           description="Tạo, chỉnh sửa và theo dõi bài tập của tất cả khóa học"
-          gradient="from-purple-600 via-pink-600 to-red-600"
         />
 
         {/* Statistics Cards */}
@@ -357,7 +402,7 @@ export default function AdminAssignments() {
                         <Button
                           variant="outline"
                           size="icon"
-                          onClick={() => toast.info('Tính năng chỉnh sửa sẽ sớm được cập nhật')}
+                          onClick={() => openEditModal(assignment)}
                           title="Chỉnh sửa"
                         >
                           <Edit className="w-4 h-4" />
@@ -378,6 +423,100 @@ export default function AdminAssignments() {
             })
           )}
         </div>
+
+        {/* Edit Assignment Modal */}
+        {isEditModalOpen && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <CardHeader>
+                <CardTitle>Chỉnh sửa bài tập</CardTitle>
+                <CardDescription>Cập nhật thông tin bài tập</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="edit-title">
+                    Tiêu đề <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="edit-title"
+                    placeholder="Nhập tiêu đề bài tập"
+                    value={editFormData.title}
+                    onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-courseId">
+                    Khóa học <span className="text-red-500">*</span>
+                  </Label>
+                  <select
+                    id="edit-courseId"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={editFormData.courseId}
+                    onChange={(e) => setEditFormData({ ...editFormData, courseId: e.target.value })}
+                  >
+                    <option value="">Chọn khóa học</option>
+                    {courses.map(course => (
+                      <option key={course.id} value={course.id}>
+                        {course.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-dueDate">
+                      Hạn nộp <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="edit-dueDate"
+                      type="date"
+                      value={editFormData.dueDate}
+                      onChange={(e) => setEditFormData({ ...editFormData, dueDate: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-maxScore">Điểm tối đa</Label>
+                    <Input
+                      id="edit-maxScore"
+                      type="number"
+                      value={editFormData.maxScore}
+                      onChange={(e) => setEditFormData({ ...editFormData, maxScore: parseInt(e.target.value) })}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-description">Mô tả</Label>
+                  <Textarea
+                    id="edit-description"
+                    placeholder="Nhập mô tả bài tập..."
+                    rows={4}
+                    value={editFormData.description}
+                    onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setIsEditModalOpen(false)}
+                  >
+                    Hủy
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    onClick={handleUpdateAssignment}
+                  >
+                    Lưu thay đổi
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Create Assignment Modal */}
         {showCreateModal && (

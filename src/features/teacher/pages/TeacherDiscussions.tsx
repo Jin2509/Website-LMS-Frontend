@@ -172,7 +172,7 @@ export default function TeacherDiscussions() {
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 bg-clip-text text-transparent mb-2">
+              <h1 className="text-5xl font-bold  bg-clip-text mb-2">
                 Thảo luận
               </h1>
               <p className="text-gray-600 mt-1">Trao đổi với học sinh và quản lý thảo luận</p>

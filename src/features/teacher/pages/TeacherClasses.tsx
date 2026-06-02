@@ -9,7 +9,6 @@ import { Link } from 'react-router';
 import { toast } from 'sonner';
 
 export default function TeacherClasses() {
-  // Filter classes for current teacher (for demo, showing all)
   const myClasses = classes;
 
   return (
@@ -17,8 +16,8 @@ export default function TeacherClasses() {
       <div className="max-w-7xl mx-auto">
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 bg-clip-text text-transparent mb-2">
-              Lớp học của tôi
+            <h1 className="text-5xl font-bold bg-clip-text mb-2">
+              Quản lí lớp học
             </h1>
             <p className="text-gray-600 mt-1">Quản lý các lớp học bạn đang giảng dạy</p>
           </div>
